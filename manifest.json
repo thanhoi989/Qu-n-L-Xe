@@ -2,7 +2,15 @@
   "name": "Quản lý thuê xe",
   "short_name": "Quản lý xe",
   "start_url": "./QLTX.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#0d6efd"
+  "theme_color": "#0d6efd",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/744/744465.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
 }
