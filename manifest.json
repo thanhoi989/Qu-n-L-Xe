@@ -1,6 +1,6 @@
 {
-  "name": "Quản lý thuê xe",
-  "short_name": "Quản lý xe",
+  "name": "Thuê Xe",
+  "short_name": "Thuê Xe",
   "start_url": "./QLTX.html",
   "scope": "./",
   "display": "standalone",
