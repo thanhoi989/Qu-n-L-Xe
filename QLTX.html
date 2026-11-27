@@ -3,39 +3,112 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LỊCH SỬ THUÊ XE</title>
-    <!-- Tải Tailwind CSS -->
+    <title>Quản Lý Lịch Sử Thuê Xe</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Inter hỗ trợ tiếng Việt đẹp -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- FontAwesome cho các icon -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Thư viện html2pdf để xuất file PDF trực tiếp -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Thư viện xuất PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        html {
-            font-size: 17px; /* Cỡ chữ dễ đọc */
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f8fafc;
         }
-        /* Tùy chỉnh thanh cuộn cho bảng trên thiết bị nhỏ */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
+        .table-container::-webkit-scrollbar {
+            height: 8px;
+            width: 8px;
         }
-        ::-webkit-scrollbar-track {
+        .table-container::-webkit-scrollbar-track {
             background: #f1f5f9;
         }
-        ::-webkit-scrollbar-thumb {
+        .table-container::-webkit-scrollbar-thumb {
             background: #cbd5e1;
-            border-radius: 3px;
+            border-radius: 4px;
         }
-        ::-webkit-scrollbar-thumb:hover {
+        .table-container::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
         }
-        /* CSS tối ưu khi xuất PDF / In ấn */
+
+        /* Vùng dựng bảng PDF trắng đen kiểu Excel (Times New Roman 12pt, không khung) */
+        #excelPdfSheet {
+            position: fixed;
+            left: -10000px;
+            top: 0;
+            width: 1120px;
+            background: #ffffff;
+            color: #000000;
+            font-family: "Times New Roman", Times, serif;
+            font-size: 12pt;
+            line-height: 1.25;
+            padding: 10px 16px;
+            box-sizing: border-box;
+        }
+        .pdf-sheet-title {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 14pt;
+            font-weight: bold;
+            text-align: center;
+            color: #000000;
+            margin-bottom: 2px;
+        }
+        .pdf-sheet-sub {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 11pt;
+            text-align: center;
+            color: #000000;
+            margin-bottom: 8px;
+        }
+        #excelPdfTable {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            font-family: "Times New Roman", Times, serif;
+            font-size: 12pt;
+            color: #000000;
+            background: #ffffff;
+        }
+        #excelPdfTable th,
+        #excelPdfTable td {
+            border: none;
+            border-bottom: 1px solid #d4d4d4;
+            padding: 4px 5px;
+            vertical-align: top;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            color: #000000;
+            background: #ffffff;
+            font-size: 12pt;
+        }
+        #excelPdfTable thead th {
+            font-weight: bold;
+            text-align: center;
+            vertical-align: middle;
+            border-top: 1.5px solid #000000;
+            border-bottom: 1.5px solid #000000;
+            padding: 5px 4px;
+        }
+        #excelPdfTable tfoot td {
+            font-weight: bold;
+            border-top: 1.5px solid #000000;
+            border-bottom: 1.5px solid #000000;
+            padding: 5px 4px;
+        }
+        .pdf-num-right {
+            text-align: right;
+            white-space: nowrap;
+        }
+        .pdf-num-center {
+            text-align: center;
+        }
+        .pdf-small-note {
+            display: block;
+            font-size: 11pt;
+            margin-top: 1px;
+        }
+
         @media print {
             .no-print {
                 display: none !important;
@@ -72,7 +145,7 @@
                         <i class="fa-solid fa-upload"></i> Khôi phục
                     </button>
                     <input type="file" id="importBackupInput" accept=".json" class="hidden" onchange="importBackupJSON(event)">
-                    <button type="button" onclick="exportToPDF()" class="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md transition flex items-center gap-2 text-sm cursor-pointer">
+                    <button type="button" onclick="openPdfExportModal()" class="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md transition flex items-center gap-2 text-sm cursor-pointer">
                         <i class="fa-solid fa-file-pdf"></i> Xuất file PDF
                     </button>
                 </div>
@@ -82,7 +155,7 @@
 
     <!-- Main Content -->
     <main class="max-w-[98%] mx-auto px-3 sm:px-5 -mt-4">
-        
+
         <!-- Thẻ Thống Kê Tổng Quan (KPI Cards - 6 thẻ) -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5 mb-6 no-print">
             <!-- 1. Tổng chuyến & Tổng ngày thuê -->
@@ -180,7 +253,7 @@
             </div>
         </div>
 
-        <!-- Thanh Tìm kiếm, Chỉ số nhanh & Bộ lọc (Bố cục 2 hàng gọn gàng, cân đối) -->
+        <!-- Thanh Tìm kiếm, Chỉ số nhanh & Bộ lọc -->
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 mb-6 space-y-3.5 no-print">
             <!-- Hàng 1: Các thẻ chỉ số sử dụng xe & nút Thống kê % -->
             <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 pb-3.5 border-b border-slate-100">
@@ -241,7 +314,7 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2.5 items-center">
                 <div class="relative sm:col-span-2 lg:col-span-4">
                     <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-                    <input type="text" id="searchInput" onkeyup="filterData()" placeholder="Tìm xe, biển số, địa điểm, ghi chú..." 
+                    <input type="text" id="searchInput" onkeyup="filterData()" placeholder="Tìm xe, biển số, địa điểm, ghi chú..."
                         class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition">
                 </div>
 
@@ -274,7 +347,7 @@
             </div>
         </div>
 
-        <!-- Khung Thống Kê % Xe Đã Sử Dụng (Ẩn mặc định, bấm mới xổ ra) -->
+        <!-- Khung Thống Kê % Xe Đã Sử Dụng -->
         <div id="carUsagePanel" class="hidden bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-indigo-100 mb-6 no-print">
             <div class="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 border-b border-slate-100">
                 <div>
@@ -287,20 +360,12 @@
                     Thu gọn <i class="fa-solid fa-chevron-up ml-1"></i>
                 </button>
             </div>
-            <div id="carUsageContent" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-                <!-- Nội dung thống kê % xe được render tự động bằng JS -->
-            </div>
+            <div id="carUsageContent" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5"></div>
         </div>
 
-        <!-- Khu vực Bảng Dữ Liệu Chính (Dùng để xuất PDF) -->
-        <div id="pdfExportArea" class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <!-- Tiêu đề chỉ hiện khi xuất PDF -->
-            <div id="pdfHeader" class="hidden p-6 border-b border-slate-200 text-center">
-                <h2 class="text-xl font-bold text-slate-900 uppercase">BẢNG KÊ LỊCH SỬ THUÊ XE</h2>
-                <p id="pdfSubHeader" class="text-xs text-slate-500 mt-1"></p>
-            </div>
-
-            <div class="overflow-x-auto">
+        <!-- Khu vực Bảng Dữ Liệu Chính trên giao diện -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="overflow-x-auto table-container">
                 <table class="w-full text-left border-collapse table-auto">
                     <thead>
                         <tr class="bg-slate-100/80 border-b border-slate-200 text-slate-600 text-xs uppercase tracking-tight font-semibold">
@@ -320,15 +385,11 @@
                             <th class="py-3 px-1.5 text-center w-16 no-print">Thao tác</th>
                         </tr>
                     </thead>
-                    <tbody id="tableBody" class="divide-y divide-slate-100 text-[15px] break-words">
-                        <!-- Dữ liệu được render tự động bằng JS -->
-                    </tbody>
-                    <tfoot id="tableFoot" class="bg-slate-50 border-t-2 border-slate-200 font-bold text-[15px]">
-                        <!-- Dòng tổng cộng -->
-                    </tfoot>
+                    <tbody id="tableBody" class="divide-y divide-slate-100 text-[15px] break-words"></tbody>
+                    <tfoot id="tableFoot" class="bg-slate-50 border-t-2 border-slate-200 font-bold text-[15px]"></tfoot>
                 </table>
             </div>
-            
+
             <!-- Trạng thái trống khi chưa có dữ liệu -->
             <div id="emptyState" class="hidden py-14 px-4 text-center">
                 <div class="w-16 h-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
@@ -347,6 +408,48 @@
             </div>
         </div>
     </main>
+
+    <!-- Vùng dựng bảng trắng đen kiểu Excel (Times New Roman 12pt) để xuất PDF -->
+    <div id="excelPdfSheet" aria-hidden="true">
+        <div id="excelPdfTitle" class="pdf-sheet-title">DANH SÁCH LỊCH SỬ THUÊ XE</div>
+        <div id="excelPdfSub" class="pdf-sheet-sub"></div>
+        <table id="excelPdfTable">
+            <colgroup>
+                <col style="width: 4%;">
+                <col style="width: 11%;">
+                <col style="width: 5%;">
+                <col style="width: 18%;">
+                <col style="width: 11%;">
+                <col style="width: 6%;">
+                <col style="width: 6%;">
+                <col style="width: 6%;">
+                <col style="width: 7%;">
+                <col style="width: 10%;">
+                <col style="width: 9%;">
+                <col style="width: 9%;">
+                <col style="width: 6%;">
+            </colgroup>
+            <thead>
+                <tr id="excelPdfHeadRow">
+                    <th>STT</th>
+                    <th>Ngày</th>
+                    <th>Ngày</th>
+                    <th>Thông tin xe</th>
+                    <th>Địa điểm</th>
+                    <th>Thuê</th>
+                    <th>Xăng</th>
+                    <th>Trạm</th>
+                    <th>Tổng xe</th>
+                    <th>Cá nhân</th>
+                    <th>Khác</th>
+                    <th>Tiêu xài</th>
+                    <th>Km</th>
+                </tr>
+            </thead>
+            <tbody id="excelPdfBody"></tbody>
+            <tfoot id="excelPdfFoot"></tfoot>
+        </table>
+    </div>
 
     <!-- Danh sách gợi ý màu xe dùng chung -->
     <datalist id="carColorOptions">
@@ -367,6 +470,102 @@
         <option value="Xanh dương"></option>
         <option value="Không rõ"></option>
     </datalist>
+
+    <!-- Modal Tùy Chọn Xuất PDF Theo Chuyến Hoặc Tháng/Năm -->
+    <div id="pdfExportModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+            <div class="px-5 py-3.5 bg-emerald-700 text-white flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-file-pdf text-amber-300"></i>
+                    <h3 class="text-base sm:text-lg font-bold">Tùy chọn xuất file PDF (Trắng đen kiểu Excel)</h3>
+                </div>
+                <button type="button" onclick="closePdfExportModal()" class="text-emerald-100 hover:text-white w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/10 transition cursor-pointer">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="p-4 sm:p-5 space-y-3.5">
+                <p class="text-xs text-slate-500">Nguồn dữ liệu xét xuất: <strong id="pdfSourceCountText" class="text-slate-700">0 chuyến</strong> đang hiển thị trên bảng (Font Times New Roman 12pt, trắng đen, không cắt dòng).</p>
+
+                <!-- Lựa chọn 1: Toàn bộ danh sách hiện tại -->
+                <label class="flex items-start gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer transition">
+                    <input type="radio" name="pdfScope" value="all" checked onchange="togglePdfScopeInputs()"
+                        class="mt-1 w-4 h-4 text-emerald-600 focus:ring-emerald-500 cursor-pointer">
+                    <div class="text-sm">
+                        <div class="font-bold text-slate-800">Xuất toàn bộ danh sách đang hiển thị</div>
+                        <div class="text-xs text-slate-500 mt-0.5">Bao gồm tất cả chuyến đi theo bộ lọc hiện tại.</div>
+                    </div>
+                </label>
+
+                <!-- Lựa chọn 2: Từ chuyến số mấy đến chuyến số mấy -->
+                <label class="block p-3 rounded-xl border border-slate-200 hover:bg-blue-50/40 cursor-pointer transition">
+                    <div class="flex items-start gap-3">
+                        <input type="radio" name="pdfScope" value="tripRange" onchange="togglePdfScopeInputs()"
+                            class="mt-1 w-4 h-4 text-blue-600 focus:ring-blue-500 cursor-pointer">
+                        <div class="flex-1 text-sm">
+                            <div class="font-bold text-slate-800">Xuất theo khoảng chuyến đi (STT)</div>
+                            <div class="text-xs text-slate-500 mt-0.5">Tính theo số thứ tự từ 1 đến <span id="pdfMaxTripLabel">0</span>.</div>
+                        </div>
+                    </div>
+                    <div id="pdfTripRangeInputs" class="hidden grid grid-cols-2 gap-2.5 mt-3 pl-7">
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Từ chuyến số</label>
+                            <input type="number" id="pdfTripFrom" min="1" value="1"
+                                class="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Đến chuyến số</label>
+                            <input type="number" id="pdfTripTo" min="1" value="1"
+                                class="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                </label>
+
+                <!-- Lựa chọn 3: Từ tháng mấy năm mấy đến tháng mấy năm mấy -->
+                <label class="block p-3 rounded-xl border border-slate-200 hover:bg-indigo-50/40 cursor-pointer transition">
+                    <div class="flex items-start gap-3">
+                        <input type="radio" name="pdfScope" value="monthYearRange" onchange="togglePdfScopeInputs()"
+                            class="mt-1 w-4 h-4 text-indigo-600 focus:ring-indigo-500 cursor-pointer">
+                        <div class="flex-1 text-sm">
+                            <div class="font-bold text-slate-800">Xuất theo khoảng Tháng / Năm</div>
+                            <div class="text-xs text-slate-500 mt-0.5">Lọc các chuyến nằm trong khoảng thời gian chọn bên dưới.</div>
+                        </div>
+                    </div>
+                    <div id="pdfMonthYearRangeInputs" class="hidden space-y-2.5 mt-3 pl-7">
+                        <div class="grid grid-cols-2 gap-2.5">
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Từ tháng</label>
+                                <select id="pdfFromMonth" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"></select>
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Từ năm</label>
+                                <select id="pdfFromYear" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"></select>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2.5">
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Đến tháng</label>
+                                <select id="pdfToMonth" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"></select>
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Đến năm</label>
+                                <select id="pdfToYear" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"></select>
+                            </div>
+                        </div>
+                    </div>
+                </label>
+
+                <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="closePdfExportModal()" class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer">
+                        Hủy
+                    </button>
+                    <button type="button" onclick="confirmExportToPDF()" class="px-5 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-md transition flex items-center gap-2 cursor-pointer">
+                        <i class="fa-solid fa-file-pdf"></i> Xuất PDF ngay
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Modal Thêm / Sửa Chuyến Đi -->
     <div id="tripModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4">
@@ -419,7 +618,7 @@
                     </div>
                 </div>
 
-                <!-- Khung gọn khi bật "Đến ngày" hoặc "+ Thêm ngày" (nhập thuần kiểu dd/mm/yy, không dùng lịch) -->
+                <!-- Khung gọn khi bật "Đến ngày" hoặc "+ Thêm ngày" -->
                 <div id="dateHelperBox" class="hidden bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2.5">
                     <div class="flex flex-wrap items-end gap-2.5">
                         <div id="endDateWrapper" class="hidden">
@@ -436,7 +635,7 @@
                     </div>
                 </div>
 
-                <!-- Hàng 2: Chọn xe nhanh từ danh sách (Hỗ trợ chọn 2 xe nếu đổi xe giữa chuyến) -->
+                <!-- Hàng 2: Chọn xe nhanh từ danh sách -->
                 <div class="bg-blue-50/60 p-3.5 rounded-xl border border-blue-200/80 space-y-3">
                     <div class="flex flex-wrap items-center justify-between gap-2">
                         <label class="block text-xs font-bold text-blue-900 uppercase">
@@ -484,7 +683,7 @@
                         </div>
                     </div>
 
-                    <!-- XE 2 (Ẩn mặc định, hiện khi bấm "+ Đổi xe") -->
+                    <!-- XE 2 -->
                     <div id="secondCarSection" class="hidden bg-amber-50/70 p-3 rounded-xl border border-amber-300 space-y-2.5">
                         <div class="flex items-center justify-between">
                             <span class="text-xs font-bold text-amber-900"><i class="fa-solid fa-car-burst mr-1 text-amber-600"></i> Xe 2 (Xe đổi giữa chuyến)</span>
@@ -537,7 +736,7 @@
                         class="w-full px-3 py-1.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
 
-                <!-- Mục 1: Chi phí vận hành (Thuê, Xăng, Trạm, Tổng tự động) -->
+                <!-- Mục 1: Chi phí vận hành -->
                 <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
                     <label class="block text-xs font-bold text-slate-700 uppercase mb-2.5">1. Chi phí vận hành xe (Đơn vị: nghìn VNĐ)</label>
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
@@ -564,9 +763,8 @@
                     </div>
                 </div>
 
-                <!-- Mục 2 & Mục 3: Phân bổ nguồn chi xe (Cá nhân vs Khác) -->
+                <!-- Mục 2 & Mục 3: Phân bổ nguồn chi xe -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <!-- Mục 2: Chi phí cá nhân -->
                     <div class="bg-red-50/50 p-3.5 rounded-xl border border-red-200/70">
                         <label class="block text-xs font-bold text-red-700 uppercase mb-2">
                             <i class="fa-solid fa-user-tag mr-1"></i> 2. Chi phí Cá nhân
@@ -585,7 +783,6 @@
                         </div>
                     </div>
 
-                    <!-- Mục 3: Chi phí khác -->
                     <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
                         <label class="block text-xs font-bold text-slate-700 uppercase mb-2">
                             <i class="fa-solid fa-users mr-1"></i> 3. Chi phí Khác (Quỹ / Chung)
@@ -611,7 +808,7 @@
                     <span id="balanceWarningText"></span>
                 </div>
 
-                <!-- Mục 4: Chi phí Tiêu xài (Tính riêng, không cộng vào Tổng chi phí xe) -->
+                <!-- Mục 4: Chi phí Tiêu xài -->
                 <div class="bg-purple-50/60 p-3.5 rounded-xl border border-purple-200">
                     <div class="flex items-center justify-between mb-2">
                         <label class="block text-xs font-bold text-purple-800 uppercase">
@@ -783,7 +980,6 @@
         const STORAGE_KEY = 'lich_su_thue_xe_data_v2';
         const CARS_STORAGE_KEY = 'danh_sach_xe_thue_v2';
 
-        // Danh sách 16 xe mặc định
         const DEFAULT_CARS = [
             { id: 1, type: 'Accent MT', color: 'Đỏ', plate: '64A12415', contact: 'Khánh Thiện' },
             { id: 2, type: 'Ertiga AT', color: 'Xám', plate: '51H53660', contact: 'Khánh Thiện' },
@@ -965,10 +1161,10 @@
                 if (t.car2) allTripCars.push(t.car2);
             });
             const uniqueCars = [...new Set(allTripCars.filter(c => c.trim() !== ''))];
-            
-            filterCarSelect.innerHTML = '<option value="">Tất cả dòng xe</option>' + 
+
+            filterCarSelect.innerHTML = '<option value="">Tất cả dòng xe</option>' +
                 uniqueCars.map(c => `<option value="${c}">${c}</option>`).join('');
-            
+
             if (uniqueCars.includes(currentSelected)) {
                 filterCarSelect.value = currentSelected;
             }
@@ -1147,7 +1343,7 @@
             }, 3000);
         }
 
-        // --- XỬ LÝ NGÀY THÁNG DẠNG dd/mm/yy (KHÔNG DÙNG LỊCH) ---
+        // --- XỬ LÝ NGÀY THÁNG DẠNG dd/mm/yy ---
 
         function handleHalfSessionChange() {
             const morningCb = document.getElementById('inputHalfMorning');
@@ -1174,7 +1370,6 @@
             }
         }
 
-        // Chọn nhanh số ngày thuê (0,5 hoặc 1 ngày)
         function setQuickDays(val) {
             const daysInput = document.getElementById('inputDays');
             const morningCb = document.getElementById('inputHalfMorning');
@@ -1196,7 +1391,6 @@
             }
         }
 
-        // Bật / Tắt ô "Đến ngày" (nhập dd/mm/yy, bỏ trống thì không dùng)
         function toggleEndDateField(forceState = null) {
             const box = document.getElementById('dateHelperBox');
             const wrapper = document.getElementById('endDateWrapper');
@@ -1214,21 +1408,6 @@
             }
         }
 
-        function toIsoDate(dateObj) {
-            const yyyy = dateObj.getFullYear();
-            const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
-            const dd = String(dateObj.getDate()).padStart(2, '0');
-            return `${yyyy}-${mm}-${dd}`;
-        }
-
-        function formatShortDateVN(isoDate) {
-            if (!isoDate) return '';
-            const parts = isoDate.split('-');
-            if (parts.length !== 3) return isoDate;
-            return `${parts[2]}/${parts[1]}/${parts[0].slice(-2)}`;
-        }
-
-        // Phân tích dd/mm/yy hoặc dd/mm/yyyy thành đối tượng Date an toàn (UTC noon tránh lệch múi giờ)
         function parseShortDateToObj(shortStr, fallbackYear = null) {
             const clean = (shortStr || '').trim();
             const mFull = clean.match(/^(\d{1,2})\s*[\/\-]\s*(\d{1,2})\s*[\/\-]\s*(\d{2,4})$/);
@@ -1256,16 +1435,6 @@
             return null;
         }
 
-        function parseShortDateToIso(shortStr, fallbackYear = null) {
-            const parsed = parseShortDateToObj(shortStr, fallbackYear);
-            if (!parsed) return '';
-            const yyyy = parsed.date.getUTCFullYear();
-            const mm = String(parsed.date.getUTCMonth() + 1).padStart(2, '0');
-            const dd = String(parsed.date.getUTCDate()).padStart(2, '0');
-            return `${yyyy}-${mm}-${dd}`;
-        }
-
-        // Khi gõ vào ô "Đến ngày" (dd/mm/yy)
         function applyRangeFromText() {
             const endTextVal = document.getElementById('helperEndDateText').value.trim();
             const dateInputVal = document.getElementById('inputDate').value.trim();
@@ -1302,7 +1471,6 @@
             }
         }
 
-        // Tính tổng số ngày từ chuỗi Thời gian (hỗ trợ nửa ngày 1/2, các mốc nối '+', và khoảng ngày gộp)
         function computeDaysFromDateString(dateVal) {
             const clean = (dateVal || '').trim();
             if (!clean) return 1;
@@ -1345,7 +1513,6 @@
                 return Math.max(0.5, total);
             }
 
-            // Kiểm tra dạng khoảng ngày gộp ví dụ "15-20/08/25"
             const compactRange = clean.match(/(?:1\/2|½)?\s*(\d{1,2})\s*-\s*(\d{1,2})\s*[\/\-]\s*(\d{1,2})\s*[\/\-]\s*(\d{2,4})/);
             if (compactRange) {
                 const d1 = Number(compactRange[1]);
@@ -1364,7 +1531,6 @@
             return hasHalf ? 0.5 : 1;
         }
 
-        // Tính lại số ngày khi người dùng chỉnh ô Thời gian
         function recalcDaysFromCurrentInputs() {
             const endTextVal = document.getElementById('helperEndDateText') ? document.getElementById('helperEndDateText').value.trim() : '';
             if (endTextVal) {
@@ -1376,7 +1542,6 @@
             document.getElementById('inputDays').value = computeDaysFromDateString(dateVal);
         }
 
-        // Nút "+ Thêm ngày": nối thêm ngày vào chuỗi thời gian và tính lại số ngày chuẩn xác
         function appendNextOrSelectedDay() {
             const dateInput = document.getElementById('inputDate');
             const daysInput = document.getElementById('inputDays');
@@ -1433,7 +1598,6 @@
                 .replace(/^\s*(?:1\/2|1\/4|3\/4)\b\s*/i, ' ')
                 .trim();
 
-            // Tách theo dấu '/' để lấy tháng và năm chính xác ở các cụm như "4-6/08/26", "1/2 25/8/26", "28/08/26"
             const slashParts = cleaned.split('/').map(s => s.trim());
             if (slashParts.length >= 3) {
                 const yearRaw = slashParts[slashParts.length - 1].match(/^(\d{2,4})/);
@@ -1456,6 +1620,16 @@
             }
 
             return cleaned;
+        }
+
+        function parseMonthYearNumber(dateStr) {
+            const mk = extractMonthKey(dateStr);
+            if (!mk || mk === 'unknown') return null;
+            const parts = mk.split('/');
+            const month = Number(parts[0]);
+            if (!month || month < 1 || month > 12) return null;
+            const year = parts[1] ? Number(parts[1]) : new Date().getFullYear();
+            return { month, year, code: year * 100 + month };
         }
 
         function renderCarCellHtml(trip) {
@@ -1525,7 +1699,7 @@
 
                 const rowTotal = Number(trip.rent) + Number(trip.fuel) + Number(trip.toll);
                 const daysVal = Number(trip.days || 1);
-                
+
                 sumDays += daysVal;
                 sumRent += Number(trip.rent);
                 sumFuel += Number(trip.fuel);
@@ -1557,7 +1731,7 @@
                     <td class="py-3 px-1.5 text-right text-slate-600">${formatNum(trip.fuel)}</td>
                     <td class="py-3 px-1.5 text-right text-slate-600">${formatNum(trip.toll)}</td>
                     <td class="py-3 px-2 text-right font-bold text-blue-900 bg-blue-50/40">${formatNum(rowTotal)}</td>
-                    
+
                     <td class="py-3 px-2 bg-red-50/30">
                         ${trip.personalAmount > 0 ? `
                             <div class="font-bold text-red-600">${formatNum(trip.personalAmount)}k</div>
@@ -1579,14 +1753,13 @@
                         ` : `<span class="text-slate-300 text-xs">-</span>`}
                     </td>
 
-                    <td class="py-3 px-1.5 text-right font-medium text-slate-600">${formatNum(trip.km)}</td>
-                    
+                    <td class="py-3 px-1.5 text-right font-medium text-emerald-700 whitespace-nowrap">${formatNum(trip.km)}</td>
                     <td class="py-3 px-1.5 text-center whitespace-nowrap no-print">
                         <div class="flex items-center justify-center gap-0.5">
-                            <button type="button" onclick="openModal(${trip.id})" class="p-1 text-blue-600 hover:bg-blue-100 rounded-lg transition cursor-pointer" title="Chỉnh sửa">
+                            <button type="button" onclick="openModal(${trip.id})" class="text-blue-600 hover:bg-blue-100 p-1.5 rounded-lg transition cursor-pointer" title="Chỉnh sửa">
                                 <i class="fa-solid fa-pen-to-square"></i>
                             </button>
-                            <button type="button" onclick="confirmDelete(${trip.id})" class="p-1 text-red-500 hover:bg-red-100 rounded-lg transition cursor-pointer" title="Xóa">
+                            <button type="button" onclick="openDeleteModal(${trip.id})" class="text-red-500 hover:bg-red-100 p-1.5 rounded-lg transition cursor-pointer" title="Xóa">
                                 <i class="fa-solid fa-trash-can"></i>
                             </button>
                         </div>
@@ -1596,17 +1769,17 @@
             });
 
             tfoot.innerHTML = `
-                <tr>
-                    <td colspan="2" class="py-3.5 px-2 text-right uppercase text-xs tracking-wider text-slate-500">Tổng (${dataToRender.length} chuyến):</td>
-                    <td class="py-3.5 px-1.5 text-center text-blue-700">${formatNum(sumDays)}</td>
+                <tr class="text-slate-800 bg-slate-100/90">
+                    <td colspan="2" class="py-3.5 px-2 text-right uppercase text-xs tracking-wider text-slate-600">Tổng cộng (${dataToRender.length} chuyến):</td>
+                    <td class="py-3.5 px-1.5 text-center text-blue-800">${sumDays}</td>
                     <td colspan="2"></td>
                     <td class="py-3.5 px-1.5 text-right text-slate-700">${formatNum(sumRent)}</td>
                     <td class="py-3.5 px-1.5 text-right text-slate-700">${formatNum(sumFuel)}</td>
                     <td class="py-3.5 px-1.5 text-right text-slate-700">${formatNum(sumToll)}</td>
-                    <td class="py-3.5 px-2 text-right text-blue-900 bg-blue-100/50 text-base">${formatNum(sumTotal)}</td>
-                    <td class="py-3.5 px-2 text-red-600 bg-red-100/40 text-base">${formatNum(sumPersonal)}k</td>
-                    <td class="py-3.5 px-2 text-slate-800 text-base">${formatNum(sumOther)}k</td>
-                    <td class="py-3.5 px-2 text-purple-700 bg-purple-100/40 text-base">${formatNum(sumSpending)}k</td>
+                    <td class="py-3.5 px-2 text-right text-blue-900 bg-blue-100/60">${formatNum(sumTotal)}</td>
+                    <td class="py-3.5 px-2 text-red-600 bg-red-100/50">${formatNum(sumPersonal)}k</td>
+                    <td class="py-3.5 px-2 text-slate-800">${formatNum(sumOther)}k</td>
+                    <td class="py-3.5 px-2 text-purple-700 bg-purple-100/50">${formatNum(sumSpending)}k</td>
                     <td class="py-3.5 px-1.5 text-right text-emerald-700">${formatNum(sumKm)}</td>
                     <td class="no-print"></td>
                 </tr>
@@ -1616,168 +1789,138 @@
         }
 
         function updateStats(data) {
-            let sumDays = 0, sumRent = 0, sumFuel = 0, sumToll = 0, sumPersonal = 0, sumOther = 0, sumSpending = 0, sumKm = 0;
+            const tripsCount = data.length;
+            const totalDays = data.reduce((acc, t) => acc + Number(t.days || 1), 0);
+            const totalKm = data.reduce((acc, t) => acc + Number(t.km || 0), 0);
+            const totalCost = data.reduce((acc, t) => acc + Number(t.rent || 0) + Number(t.fuel || 0) + Number(t.toll || 0), 0);
+            const personalCost = data.reduce((acc, t) => acc + Number(t.personalAmount || 0), 0);
+            const otherCost = data.reduce((acc, t) => acc + Number(t.otherAmount || 0), 0);
+            const spendingCost = data.reduce((acc, t) => acc + Number(t.spendingAmount || 0), 0);
 
-            data.forEach(t => {
-                sumDays += Number(t.days || 1);
-                sumRent += Number(t.rent);
-                sumFuel += Number(t.fuel);
-                sumToll += Number(t.toll);
-                sumPersonal += Number(t.personalAmount);
-                sumOther += Number(t.otherAmount);
-                sumSpending += Number(t.spendingAmount || 0);
-                sumKm += Number(t.km);
-            });
-
-            const totalCost = sumRent + sumFuel + sumToll;
-            const personalPct = totalCost > 0 ? Math.round((sumPersonal / totalCost) * 100) : 0;
-            const otherPct = totalCost > 0 ? Math.round((sumOther / totalCost) * 100) : 0;
-            const avgKm = data.length > 0 ? Math.round(sumKm / data.length) : 0;
-
-            const startDate = new Date(2025, 6, 19);
-            startDate.setHours(0, 0, 0, 0);
-            const nowLocal = new Date();
-            const currentDate = new Date(nowLocal.getFullYear(), nowLocal.getMonth(), nowLocal.getDate());
-            const msPerDay = 1000 * 60 * 60 * 24;
-            const elapsedDays = Math.max(1, Math.floor((currentDate - startDate) / msPerDay) + 1);
-            const rawUsagePct = (sumDays / elapsedDays) * 100;
-            const usagePctText = Number.isInteger(rawUsagePct) ? `${rawUsagePct}%` : `${rawUsagePct.toFixed(2)}%`;
-
-            const elapsedMonths = Math.max(1, elapsedDays / 30.4375);
-            const avgDaysPerMonth = (sumDays / elapsedMonths).toFixed(1).replace('.', ',');
-
-            const calendarMonths = Math.max(1, (nowLocal.getFullYear() - 2025) * 12 + (nowLocal.getMonth() - 6));
-            const avgCostPerMonth = Math.round(totalCost / calendarMonths);
-
-            document.getElementById('stat-trips').innerText = data.length;
-            document.getElementById('stat-days').innerText = formatNum(sumDays);
-            document.getElementById('stat-usage-rate').innerText = usagePctText;
-            document.getElementById('stat-usage-detail').innerText = `${formatNum(sumDays)}/${formatNum(elapsedDays)} ngày từ 19/07/25`;
-            document.getElementById('stat-avg-days-month').innerText = `${avgDaysPerMonth} ngày`;
-            document.getElementById('stat-avg-cost-month').innerText = `${formatNum(avgCostPerMonth)} k`;
-            document.getElementById('stat-km').innerText = formatNum(sumKm);
-            document.getElementById('stat-avg-km').innerText = formatNum(avgKm);
+            document.getElementById('stat-trips').innerText = tripsCount;
+            document.getElementById('stat-days').innerText = totalDays;
+            document.getElementById('stat-km').innerText = formatNum(totalKm);
+            document.getElementById('stat-avg-km').innerText = tripsCount > 0 ? Math.round(totalKm / tripsCount).toLocaleString('vi-VN') : 0;
             document.getElementById('stat-total-cost').innerText = formatNum(totalCost);
-            document.getElementById('stat-personal-cost').innerText = formatNum(sumPersonal);
-            document.getElementById('stat-personal-percent').innerText = `${personalPct}% chi phí xe`;
-            document.getElementById('stat-other-cost').innerText = formatNum(sumOther);
-            document.getElementById('stat-other-percent').innerText = `${otherPct}% chi phí xe`;
-            document.getElementById('stat-spending-cost').innerText = formatNum(sumSpending);
+            document.getElementById('stat-personal-cost').innerText = formatNum(personalCost);
+            document.getElementById('stat-other-cost').innerText = formatNum(otherCost);
+            document.getElementById('stat-spending-cost').innerText = formatNum(spendingCost);
 
-            renderCarUsageStats(data);
+            const pPercent = totalCost > 0 ? Math.round((personalCost / totalCost) * 100) : 0;
+            const oPercent = totalCost > 0 ? Math.round((otherCost / totalCost) * 100) : 0;
+            document.getElementById('stat-personal-percent').innerText = `${pPercent}% chi phí xe`;
+            document.getElementById('stat-other-percent').innerText = `${oPercent}% chi phí xe`;
+
+            const startDate = new Date(Date.UTC(2025, 6, 19));
+            const nowLocal = new Date();
+            const todayUtc = new Date(Date.UTC(nowLocal.getFullYear(), nowLocal.getMonth(), nowLocal.getDate()));
+            const elapsedDays = Math.max(1, Math.floor((todayUtc - startDate) / (1000 * 60 * 60 * 24)) + 1);
+            const usageRate = ((totalDays / elapsedDays) * 100).toFixed(1).replace('.', ',');
+
+            document.getElementById('stat-usage-rate').innerText = `${usageRate}%`;
+            document.getElementById('stat-usage-detail').innerText = `${totalDays}/${elapsedDays} ngày từ 19/07/25`;
+
+            const elapsedMonthsExact = Math.max(1 / 30, elapsedDays / 30.4375);
+            const avgDaysPerMonth = (totalDays / elapsedMonthsExact).toFixed(1).replace('.', ',');
+            document.getElementById('stat-avg-days-month').innerText = `${avgDaysPerMonth} ngày`;
+
+            const totalMonthsInclusive = Math.max(1, (nowLocal.getFullYear() - 2025) * 12 + (nowLocal.getMonth() - 6) + 1);
+            const avgCostPerMonth = Math.round(totalCost / totalMonthsInclusive);
+            document.getElementById('stat-avg-cost-month').innerText = `${formatNum(avgCostPerMonth)} k`;
+
+            renderCarUsageStats(data, totalDays);
         }
 
         function toggleCarUsageStats(forceState = null) {
             const panel = document.getElementById('carUsagePanel');
             const chevron = document.getElementById('carUsageChevron');
-            const shouldShow = forceState !== null ? forceState : panel.classList.contains('hidden');
+            if (!panel) return;
 
+            const shouldShow = forceState !== null ? forceState : panel.classList.contains('hidden');
             if (shouldShow) {
                 panel.classList.remove('hidden');
-                chevron.classList.add('rotate-180');
-                renderCarUsageStats(currentFilteredData);
+                if (chevron) chevron.classList.add('rotate-180');
             } else {
                 panel.classList.add('hidden');
-                chevron.classList.remove('rotate-180');
+                if (chevron) chevron.classList.remove('rotate-180');
             }
         }
 
-        function renderCarUsageStats(data) {
-            const container = document.getElementById('carUsageContent');
+        function renderCarUsageStats(data, totalDays) {
+            const contentEl = document.getElementById('carUsageContent');
             const totalCountEl = document.getElementById('carUsageTotalCount');
-            if (!container || !totalCountEl) return;
+            if (!contentEl) return;
 
-            const usageMap = new Map();
-            let totalDaysUsed = 0;
+            if (totalCountEl) totalCountEl.innerText = totalDays;
 
-            data.forEach(trip => {
-                const tripDays = Number(trip.days || 1);
-                const hasCar1 = trip.car && trip.car.trim() !== '';
-                const hasCar2 = trip.car2 && trip.car2.trim() !== '';
-
-                if (hasCar1 && hasCar2) {
-                    const splitDays = tripDays / 2;
-
-                    const key1 = `${trip.car.trim()}|${(trip.plate || '').trim().toUpperCase()}`;
-                    if (!usageMap.has(key1)) {
-                        usageMap.set(key1, {
-                            name: trip.car.trim(),
-                            plate: (trip.plate || '').trim().toUpperCase(),
-                            color: trip.color || '',
-                            days: 0
-                        });
-                    }
-                    usageMap.get(key1).days += splitDays;
-
-                    const key2 = `${trip.car2.trim()}|${(trip.plate2 || '').trim().toUpperCase()}`;
-                    if (!usageMap.has(key2)) {
-                        usageMap.set(key2, {
-                            name: trip.car2.trim(),
-                            plate: (trip.plate2 || '').trim().toUpperCase(),
-                            color: trip.color2 || '',
-                            days: 0
-                        });
-                    }
-                    usageMap.get(key2).days += splitDays;
-                    totalDaysUsed += tripDays;
-                } else if (hasCar1) {
-                    const key1 = `${trip.car.trim()}|${(trip.plate || '').trim().toUpperCase()}`;
-                    if (!usageMap.has(key1)) {
-                        usageMap.set(key1, {
-                            name: trip.car.trim(),
-                            plate: (trip.plate || '').trim().toUpperCase(),
-                            color: trip.color || '',
-                            days: 0
-                        });
-                    }
-                    usageMap.get(key1).days += tripDays;
-                    totalDaysUsed += tripDays;
-                } else if (hasCar2) {
-                    const key2 = `${trip.car2.trim()}|${(trip.plate2 || '').trim().toUpperCase()}`;
-                    if (!usageMap.has(key2)) {
-                        usageMap.set(key2, {
-                            name: trip.car2.trim(),
-                            plate: (trip.plate2 || '').trim().toUpperCase(),
-                            color: trip.color2 || '',
-                            days: 0
-                        });
-                    }
-                    usageMap.get(key2).days += tripDays;
-                    totalDaysUsed += tripDays;
-                }
-            });
-
-            const totalDaysFormatted = Number.isInteger(totalDaysUsed) ? totalDaysUsed : Number(totalDaysUsed.toFixed(2));
-            totalCountEl.innerText = formatNum(totalDaysFormatted);
-
-            if (totalDaysUsed === 0) {
-                container.innerHTML = `<div class="col-span-full text-center py-6 text-sm text-slate-400">Chưa có dữ liệu chuyến thuê xe để thống kê tỷ lệ %.</div>`;
+            if (!data || data.length === 0 || totalDays <= 0) {
+                contentEl.innerHTML = `<div class="col-span-full text-sm text-slate-400 italic py-2">Không có dữ liệu ngày sử dụng xe để thống kê.</div>`;
                 return;
             }
 
-            const sortedCars = Array.from(usageMap.values()).sort((a, b) => b.days - a.days);
+            const carMap = new Map();
 
-            return container.innerHTML = sortedCars.map(item => {
-                const rawPct = (item.days / totalDaysUsed) * 100;
-                const pctText = Number.isInteger(rawPct) ? rawPct : rawPct.toFixed(1);
-                const itemDaysFormatted = Number.isInteger(item.days) ? item.days : Number(item.days.toFixed(2));
+            data.forEach(trip => {
+                const daysVal = Number(trip.days || 1);
+                const hasCar2 = !!(trip.car2 && trip.car2.trim() !== '');
+
+                const addToMap = (carName, plate, color, contact, addedDays) => {
+                    const cleanName = (carName || 'Không rõ loại xe').trim();
+                    const cleanPlate = (plate || '').trim().toUpperCase();
+                    const key = `${cleanName.toLowerCase()}__${cleanPlate}`;
+
+                    if (!carMap.has(key)) {
+                        carMap.set(key, {
+                            name: cleanName,
+                            plate: cleanPlate,
+                            color: (color || '').trim(),
+                            contact: (contact || '').trim(),
+                            days: 0,
+                            trips: 0
+                        });
+                    }
+                    const item = carMap.get(key);
+                    item.days += addedDays;
+                    item.trips += 1;
+                    if (!item.color && color) item.color = color.trim();
+                    if (!item.contact && contact) item.contact = contact.trim();
+                };
+
+                if (hasCar2) {
+                    const halfDays = daysVal / 2;
+                    addToMap(trip.car, trip.plate, trip.color, trip.contact, halfDays);
+                    addToMap(trip.car2, trip.plate2, trip.color2, trip.contact2, halfDays);
+                } else {
+                    addToMap(trip.car, trip.plate, trip.color, trip.contact, daysVal);
+                }
+            });
+
+            const sortedCars = [...carMap.values()].sort((a, b) => b.days - a.days || b.trips - a.trips);
+
+            contentEl.innerHTML = sortedCars.map(item => {
+                const pct = ((item.days / totalDays) * 100).toFixed(1).replace('.', ',');
+                const barWidth = Math.min(100, (item.days / totalDays) * 100).toFixed(1);
+                const formattedDays = Number.isInteger(item.days) ? item.days : String(item.days).replace('.', ',');
+
                 return `
-                    <div class="border border-slate-200/90 rounded-xl p-3.5 bg-slate-50/50 hover:bg-indigo-50/30 transition">
+                    <div class="p-3.5 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-indigo-50/40 transition">
                         <div class="flex items-start justify-between gap-2">
-                            <div>
-                                <div class="font-bold text-slate-800 text-[15px]">${item.name}</div>
+                            <div class="min-w-0">
+                                <div class="font-bold text-slate-800 text-sm truncate">${item.name}</div>
                                 <div class="flex flex-wrap items-center gap-1.5 mt-1">
-                                    ${item.plate ? `<span class="px-1.5 py-0.5 bg-amber-50 border border-amber-300 text-amber-900 font-mono text-xs font-bold rounded">${item.plate}</span>` : ''}
+                                    ${item.plate ? `<span class="px-1.5 py-0.5 bg-amber-50 border border-amber-300 text-amber-900 font-mono text-[11px] font-bold rounded">${item.plate}</span>` : ''}
                                     ${getColorBadge(item.color)}
                                 </div>
+                                ${item.contact ? `<div class="text-xs text-slate-500 mt-1 truncate"><i class="fa-solid fa-phone-volume text-[10px] mr-1 text-indigo-500"></i>${item.contact}</div>` : ''}
                             </div>
                             <div class="text-right shrink-0">
-                                <div class="text-base font-bold text-indigo-700">${pctText}%</div>
-                                <div class="text-xs font-medium text-slate-500">${formatNum(itemDaysFormatted)}/${formatNum(totalDaysFormatted)} ngày</div>
+                                <div class="text-lg font-extrabold text-indigo-700 leading-none">${pct}%</div>
+                                <div class="text-xs font-semibold text-slate-600 mt-1">${formattedDays} ngày</div>
+                                <div class="text-[11px] text-slate-400">${item.trips} chuyến</div>
                             </div>
                         </div>
-                        <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden mt-2.5">
-                            <div class="bg-indigo-600 h-full rounded-full transition-all duration-300" style="width: ${Math.min(rawPct, 100)}%"></div>
+                        <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden mt-2.5">
+                            <div class="h-full bg-indigo-600 rounded-full transition-all duration-300" style="width: ${barWidth}%"></div>
                         </div>
                     </div>
                 `;
@@ -1786,100 +1929,67 @@
 
         function filterData() {
             const keyword = document.getElementById('searchInput').value.toLowerCase().trim();
-            const carFilter = document.getElementById('filterCar').value.toLowerCase();
+            const monthFilter = document.getElementById('filterMonth').value;
+            const yearFilter = document.getElementById('filterYear').value;
+            const carFilter = document.getElementById('filterCar').value;
             const costTypeFilter = document.getElementById('filterCostType').value;
-            const monthFilter = document.getElementById('filterMonth') ? document.getElementById('filterMonth').value : '';
-            const yearFilter = document.getElementById('filterYear') ? document.getElementById('filterYear').value : '';
 
-            const filtered = trips.filter(t => {
-                const matchKeyword = !keyword || 
-                    t.date.toLowerCase().includes(keyword) ||
-                    t.car.toLowerCase().includes(keyword) ||
-                    (t.plate && t.plate.toLowerCase().includes(keyword)) ||
-                    (t.contact && t.contact.toLowerCase().includes(keyword)) ||
-                    (t.color && t.color.toLowerCase().includes(keyword)) ||
-                    (t.car2 && t.car2.toLowerCase().includes(keyword)) ||
-                    (t.plate2 && t.plate2.toLowerCase().includes(keyword)) ||
-                    (t.contact2 && t.contact2.toLowerCase().includes(keyword)) ||
-                    t.location.toLowerCase().includes(keyword) ||
-                    (t.personalNote && t.personalNote.toLowerCase().includes(keyword)) ||
-                    (t.otherNote && t.otherNote.toLowerCase().includes(keyword)) ||
-                    (t.spendingNote && t.spendingNote.toLowerCase().includes(keyword));
+            const filtered = trips.filter(trip => {
+                const mk = extractMonthKey(trip.date);
+                const parts = mk && mk !== 'unknown' ? mk.split('/') : [];
+                const tripMonth = parts[0] || '';
+                const tripYear = parts[1] || '';
 
-                const matchCar = !carFilter || 
-                    t.car.toLowerCase() === carFilter || 
-                    (t.car2 && t.car2.toLowerCase() === carFilter);
-                
-                let matchCostType = true;
-                if (costTypeFilter === 'personal') matchCostType = Number(t.personalAmount) > 0;
-                if (costTypeFilter === 'other') matchCostType = Number(t.otherAmount) > 0;
-                if (costTypeFilter === 'spending') matchCostType = Number(t.spendingAmount || 0) > 0;
+                if (monthFilter && tripMonth !== monthFilter) return false;
+                if (yearFilter && tripYear !== yearFilter) return false;
+                if (carFilter && trip.car !== carFilter && trip.car2 !== carFilter) return false;
 
-                let matchMonthYear = true;
-                if (monthFilter || yearFilter) {
-                    const mk = extractMonthKey(t.date);
-                    const parts = mk.split('/');
-                    const tripMonth = parts[0] || '';
-                    const tripYear = parts[1] || '';
-                    if (monthFilter && tripMonth !== monthFilter) matchMonthYear = false;
-                    if (yearFilter && tripYear !== yearFilter) matchMonthYear = false;
+                if (costTypeFilter === 'personal' && !(Number(trip.personalAmount) > 0)) return false;
+                if (costTypeFilter === 'other' && !(Number(trip.otherAmount) > 0)) return false;
+                if (costTypeFilter === 'spending' && !(Number(trip.spendingAmount || 0) > 0)) return false;
+
+                if (keyword) {
+                    const searchBlob = [
+                        trip.date, trip.car, trip.plate, trip.color, trip.contact,
+                        trip.car2, trip.plate2, trip.color2, trip.contact2, trip.swapReason,
+                        trip.location, trip.personalNote, trip.otherNote, trip.spendingNote
+                    ].join(' ').toLowerCase();
+                    if (!searchBlob.includes(keyword)) return false;
                 }
 
-                return matchKeyword && matchCar && matchCostType && matchMonthYear;
+                return true;
             });
 
             renderTable(filtered);
         }
 
-        function calcModalTotal() {
-            const rent = Number(document.getElementById('inputRent').value) || 0;
-            const fuel = Number(document.getElementById('inputFuel').value) || 0;
-            const toll = Number(document.getElementById('inputToll').value) || 0;
-            const total = rent + fuel + toll;
-            document.getElementById('displayModalTotal').value = formatNum(total);
-            checkBalance();
-        }
-
-        function checkBalance() {
-            const rent = Number(document.getElementById('inputRent').value) || 0;
-            const fuel = Number(document.getElementById('inputFuel').value) || 0;
-            const toll = Number(document.getElementById('inputToll').value) || 0;
-            const total = rent + fuel + toll;
-
-            const personal = Number(document.getElementById('inputPersonalAmount').value) || 0;
-            const other = Number(document.getElementById('inputOtherAmount').value) || 0;
-            const sumSplit = personal + other;
-
-            const warningBox = document.getElementById('balanceWarning');
-            const warningText = document.getElementById('balanceWarningText');
-
-            if (total > 0 && sumSplit !== total) {
-                const diff = total - sumSplit;
-                warningText.innerText = `Lưu ý: Tổng Cá nhân + Khác (${formatNum(sumSplit)}k) đang chênh lệch ${formatNum(Math.abs(diff))}k so với Tổng chi phí xe (${formatNum(total)}k).`;
-                warningBox.classList.remove('hidden');
-            } else {
-                warningBox.classList.add('hidden');
-            }
-        }
-
-        document.getElementById('inputPersonalAmount').addEventListener('input', checkBalance);
-        document.getElementById('inputOtherAmount').addEventListener('input', checkBalance);
-
-        function openModal(id = null) {
+        function openModal(editId = null) {
             const modal = document.getElementById('tripModal');
-            const title = document.getElementById('modalTitle');
+            const form = document.getElementById('tripForm');
+            form.reset();
+            toggleSecondCar(false);
             document.getElementById('balanceWarning').classList.add('hidden');
-            document.getElementById('selectPresetCar1').value = '';
-            document.getElementById('selectPresetCar2').value = '';
+            document.getElementById('dateHelperBox').classList.add('hidden');
+            document.getElementById('endDateWrapper').classList.add('hidden');
+            const endTextInput = document.getElementById('helperEndDateText');
+            if (endTextInput) endTextInput.value = '';
+            const morningCb = document.getElementById('inputHalfMorning');
+            if (morningCb) morningCb.checked = false;
 
-            if (id) {
-                const trip = trips.find(t => t.id === id);
+            if (editId) {
+                const trip = trips.find(t => t.id === editId);
                 if (!trip) return;
-                title.innerText = "Chỉnh sửa thông tin chuyến đi";
+
+                document.getElementById('modalTitle').innerText = `Chỉnh sửa chuyến đi #${editId}`;
                 document.getElementById('tripId').value = trip.id;
                 document.getElementById('inputDate').value = trip.date;
-                document.getElementById('inputDays').value = trip.days || 1;
-                document.getElementById('inputHalfMorning').checked = (Number(trip.days || 1) === 0.5 && trip.halfSession === 'morning');
+                const daysVal = Number(trip.days || 1);
+                document.getElementById('inputDays').value = daysVal;
+                if (morningCb) {
+                    morningCb.checked = (daysVal === 0.5 && trip.halfSession === 'morning');
+                }
+                document.getElementById('inputKm').value = trip.km;
+
                 document.getElementById('inputCar').value = trip.car;
                 document.getElementById('inputPlate').value = trip.plate || '';
                 document.getElementById('inputColor').value = trip.color && trip.color !== 'Không rõ' ? trip.color : '';
@@ -1892,12 +2002,9 @@
                     document.getElementById('inputColor2').value = trip.color2 && trip.color2 !== 'Không rõ' ? trip.color2 : '';
                     document.getElementById('inputContact2').value = trip.contact2 || '';
                     document.getElementById('inputSwapReason').value = trip.swapReason || '';
-                } else {
-                    toggleSecondCar(false);
                 }
 
                 document.getElementById('inputLocation').value = trip.location;
-                document.getElementById('inputKm').value = trip.km;
                 document.getElementById('inputRent').value = trip.rent;
                 document.getElementById('inputFuel').value = trip.fuel;
                 document.getElementById('inputToll').value = trip.toll;
@@ -1908,14 +2015,15 @@
                 document.getElementById('inputSpendingAmount').value = trip.spendingAmount || 0;
                 document.getElementById('inputSpendingNote').value = trip.spendingNote || '';
             } else {
-                title.innerText = "Thêm chuyến thuê xe mới";
-                document.getElementById('tripForm').reset();
+                document.getElementById('modalTitle').innerText = 'Thêm chuyến thuê xe mới';
                 document.getElementById('tripId').value = '';
+                const now = new Date();
+                const dd = String(now.getDate()).padStart(2, '0');
+                const mm = String(now.getMonth() + 1).padStart(2, '0');
+                const yy = String(now.getFullYear()).slice(-2);
+                document.getElementById('inputDate').value = `${dd}/${mm}/${yy}`;
                 document.getElementById('inputDays').value = 1;
-                document.getElementById('inputHalfMorning').checked = false;
-                toggleEndDateField(false);
-                document.getElementById('dateHelperBox').classList.add('hidden');
-                toggleSecondCar(false);
+                document.getElementById('inputKm').value = 0;
             }
 
             calcModalTotal();
@@ -1926,56 +2034,67 @@
             document.getElementById('tripModal').classList.add('hidden');
         }
 
-        function saveTrip(event) {
-            event.preventDefault();
-            const idVal = document.getElementById('tripId').value;
-            const isSecondCarVisible = !document.getElementById('secondCarSection').classList.contains('hidden');
-            const daysNum = Number(document.getElementById('inputDays').value) || 1;
-            const isHalfMorning = document.getElementById('inputHalfMorning').checked;
+        function calcModalTotal() {
+            const rent = Number(document.getElementById('inputRent').value || 0);
+            const fuel = Number(document.getElementById('inputFuel').value || 0);
+            const toll = Number(document.getElementById('inputToll').value || 0);
+            const total = rent + fuel + toll;
+            document.getElementById('displayModalTotal').value = formatNum(total);
+        }
 
-            const tripObj = {
-                id: idVal ? Number(idVal) : (trips.length > 0 ? Math.max(...trips.map(t => t.id)) + 1 : 1),
+        function saveTrip(e) {
+            e.preventDefault();
+
+            const idVal = document.getElementById('tripId').value;
+            const daysVal = Number(document.getElementById('inputDays').value || 1);
+            const morningCb = document.getElementById('inputHalfMorning');
+            const halfSession = (daysVal === 0.5 && morningCb && morningCb.checked) ? 'morning' : 'afternoon';
+
+            const tripData = {
                 date: document.getElementById('inputDate').value.trim(),
-                days: daysNum,
-                halfSession: daysNum === 0.5 ? (isHalfMorning ? 'morning' : 'afternoon') : null,
+                days: daysVal,
+                halfSession: halfSession,
                 car: document.getElementById('inputCar').value.trim(),
                 plate: document.getElementById('inputPlate').value.trim().toUpperCase(),
                 color: document.getElementById('inputColor').value.trim() || 'Không rõ',
                 contact: document.getElementById('inputContact').value.trim(),
-                car2: isSecondCarVisible ? document.getElementById('inputCar2').value.trim() : '',
-                plate2: isSecondCarVisible ? document.getElementById('inputPlate2').value.trim().toUpperCase() : '',
-                color2: isSecondCarVisible ? (document.getElementById('inputColor2').value.trim() || 'Không rõ') : 'Không rõ',
-                contact2: isSecondCarVisible ? document.getElementById('inputContact2').value.trim() : '',
-                swapReason: isSecondCarVisible ? document.getElementById('inputSwapReason').value.trim() : '',
+                car2: document.getElementById('inputCar2').value.trim(),
+                plate2: document.getElementById('inputPlate2').value.trim().toUpperCase(),
+                color2: document.getElementById('inputColor2').value.trim() || 'Không rõ',
+                contact2: document.getElementById('inputContact2').value.trim(),
+                swapReason: document.getElementById('inputSwapReason').value.trim(),
                 location: document.getElementById('inputLocation').value.trim(),
-                km: Number(document.getElementById('inputKm').value) || 0,
-                rent: Number(document.getElementById('inputRent').value) || 0,
-                fuel: Number(document.getElementById('inputFuel').value) || 0,
-                toll: Number(document.getElementById('inputToll').value) || 0,
-                personalAmount: Number(document.getElementById('inputPersonalAmount').value) || 0,
+                rent: Number(document.getElementById('inputRent').value || 0),
+                fuel: Number(document.getElementById('inputFuel').value || 0),
+                toll: Number(document.getElementById('inputToll').value || 0),
+                personalAmount: Number(document.getElementById('inputPersonalAmount').value || 0),
                 personalNote: document.getElementById('inputPersonalNote').value.trim(),
-                otherAmount: Number(document.getElementById('inputOtherAmount').value) || 0,
+                otherAmount: Number(document.getElementById('inputOtherAmount').value || 0),
                 otherNote: document.getElementById('inputOtherNote').value.trim(),
-                spendingAmount: Number(document.getElementById('inputSpendingAmount').value) || 0,
-                spendingNote: document.getElementById('inputSpendingNote').value.trim()
+                spendingAmount: Number(document.getElementById('inputSpendingAmount').value || 0),
+                spendingNote: document.getElementById('inputSpendingNote').value.trim(),
+                km: Number(document.getElementById('inputKm').value || 0)
             };
 
             if (idVal) {
                 const index = trips.findIndex(t => t.id === Number(idVal));
-                if (index !== -1) trips[index] = tripObj;
-                showToast("Đã cập nhật chuyến đi thành công!");
+                if (index !== -1) {
+                    trips[index] = { ...trips[index], ...tripData };
+                    showToast("Đã cập nhật chuyến đi thành công!");
+                }
             } else {
-                trips.push(tripObj);
-                showToast("Đã thêm chuyến đi mới!");
+                const newId = trips.length > 0 ? Math.max(...trips.map(t => t.id)) + 1 : 1;
+                trips.push({ id: newId, ...tripData });
+                showToast("Đã thêm chuyến đi mới thành công!");
             }
 
             persistData();
             updateSuggestionsAndFilters();
-            closeModal();
             filterData();
+            closeModal();
         }
 
-        function confirmDelete(id) {
+        function openDeleteModal(id) {
             deleteTargetId = id;
             document.getElementById('deleteModal').classList.remove('hidden');
         }
@@ -1990,54 +2109,379 @@
                 trips = trips.filter(t => t.id !== deleteTargetId);
                 persistData();
                 updateSuggestionsAndFilters();
-                closeDeleteModal();
                 filterData();
+                closeDeleteModal();
                 showToast("Đã xóa chuyến đi!");
             }
         });
 
-        function exportToPDF() {
-            if (currentFilteredData.length === 0) {
-                showToast("Không có dữ liệu trong bảng để xuất PDF!");
+        // --- XUẤT FILE PDF TRẮNG ĐEN KIỂU EXCEL (TIMES NEW ROMAN 12PT, KHÔNG CẮT DÒNG) ---
+
+        function openPdfExportModal() {
+            const sourceList = currentFilteredData.length > 0 ? currentFilteredData : trips;
+            if (!sourceList || sourceList.length === 0) {
+                showToast("Không có dữ liệu chuyến đi để xuất PDF!");
                 return;
             }
 
-            showToast("Đang tạo file PDF, vui lòng đợi...");
+            document.getElementById('pdfSourceCountText').innerText = `${sourceList.length} chuyến`;
+            document.getElementById('pdfMaxTripLabel').innerText = sourceList.length;
 
-            const element = document.getElementById('pdfExportArea');
-            const pdfHeader = document.getElementById('pdfHeader');
-            const pdfSubHeader = document.getElementById('pdfSubHeader');
-            const noPrintElements = element.querySelectorAll('.no-print');
+            const fromInput = document.getElementById('pdfTripFrom');
+            const toInput = document.getElementById('pdfTripTo');
+            fromInput.max = sourceList.length;
+            toInput.max = sourceList.length;
+            fromInput.value = 1;
+            toInput.value = sourceList.length;
 
-            const today = new Date().toLocaleDateString('vi-VN');
-            pdfSubHeader.innerText = `Ngày xuất báo cáo: ${today} • Tổng số chuyến hiển thị: ${currentFilteredData.length}`;
-            pdfHeader.classList.remove('hidden');
-            noPrintElements.forEach(el => el.style.display = 'none');
+            const parsedDates = sourceList
+                .map(t => parseMonthYearNumber(t.date))
+                .filter(Boolean)
+                .sort((a, b) => a.code - b.code);
 
-            const opt = {
-                margin:       [10, 8, 10, 8],
-                filename:     `Lich_Su_Thue_Xe_${today.replace(/\//g, '-')}.pdf`,
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true, logging: false },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
-            };
+            const yearsSet = new Set(parsedDates.map(d => d.year));
+            const curYear = new Date().getFullYear();
+            yearsSet.add(2025);
+            yearsSet.add(curYear);
+            const sortedYears = [...yearsSet].sort((a, b) => a - b);
 
-            html2pdf().set(opt).from(element).save().then(() => {
-                pdfHeader.classList.add('hidden');
-                noPrintElements.forEach(el => el.style.display = '');
-                showToast("Đã xuất file PDF thành công!");
-            }).catch(err => {
-                console.error("Lỗi xuất PDF:", err);
-                pdfHeader.classList.add('hidden');
-                noPrintElements.forEach(el => el.style.display = '');
-                showToast("Có lỗi xảy ra khi xuất PDF!");
-            });
+            const monthOptions = Array.from({ length: 12 }, (_, i) => {
+                const m = i + 1;
+                return `<option value="${m}">Tháng ${String(m).padStart(2, '0')}</option>`;
+            }).join('');
+
+            const yearOptions = sortedYears.map(y => `<option value="${y}">Năm ${y}</option>`).join('');
+
+            const fromM = document.getElementById('pdfFromMonth');
+            const fromY = document.getElementById('pdfFromYear');
+            const toM = document.getElementById('pdfToMonth');
+            const toY = document.getElementById('pdfToYear');
+
+            fromM.innerHTML = monthOptions;
+            toM.innerHTML = monthOptions;
+            fromY.innerHTML = yearOptions;
+            toY.innerHTML = yearOptions;
+
+            if (parsedDates.length > 0) {
+                const firstD = parsedDates[0];
+                const lastD = parsedDates[parsedDates.length - 1];
+                fromM.value = firstD.month;
+                fromY.value = firstD.year;
+                toM.value = lastD.month;
+                toY.value = lastD.year;
+            } else {
+                fromM.value = 1;
+                fromY.value = curYear;
+                toM.value = 12;
+                toY.value = curYear;
+            }
+
+            const allRadio = document.querySelector('input[name="pdfScope"][value="all"]');
+            if (allRadio) allRadio.checked = true;
+            togglePdfScopeInputs();
+
+            document.getElementById('pdfExportModal').classList.remove('hidden');
         }
 
-        window.onload = () => {
-            updateSuggestionsAndFilters();
-            renderTable();
-        };
+        function closePdfExportModal() {
+            document.getElementById('pdfExportModal').classList.add('hidden');
+        }
+
+        function togglePdfScopeInputs() {
+            const scope = document.querySelector('input[name="pdfScope"]:checked')?.value || 'all';
+            document.getElementById('pdfTripRangeInputs').classList.toggle('hidden', scope !== 'tripRange');
+            document.getElementById('pdfMonthYearRangeInputs').classList.toggle('hidden', scope !== 'monthYearRange');
+        }
+
+        function getPdfSelectedData() {
+            const sourceList = currentFilteredData.length > 0 ? currentFilteredData : trips;
+            const scope = document.querySelector('input[name="pdfScope"]:checked')?.value || 'all';
+
+            if (scope === 'tripRange') {
+                let fromIdx = Number(document.getElementById('pdfTripFrom').value || 1);
+                let toIdx = Number(document.getElementById('pdfTripTo').value || sourceList.length);
+                if (fromIdx < 1) fromIdx = 1;
+                if (toIdx > sourceList.length) toIdx = sourceList.length;
+                if (fromIdx > toIdx) {
+                    const tmp = fromIdx;
+                    fromIdx = toIdx;
+                    toIdx = tmp;
+                }
+                const sliced = sourceList.slice(fromIdx - 1, toIdx);
+                return {
+                    items: sliced,
+                    subLabel: `Phạm vi: Từ chuyến số ${fromIdx} đến chuyến số ${toIdx} (${sliced.length} chuyến)`
+                };
+            }
+
+            if (scope === 'monthYearRange') {
+                const fm = Number(document.getElementById('pdfFromMonth').value);
+                const fy = Number(document.getElementById('pdfFromYear').value);
+                const tm = Number(document.getElementById('pdfToMonth').value);
+                const ty = Number(document.getElementById('pdfToYear').value);
+
+                let startCode = fy * 100 + fm;
+                let endCode = ty * 100 + tm;
+                if (startCode > endCode) {
+                    const tmp = startCode;
+                    startCode = endCode;
+                    endCode = tmp;
+                }
+
+                const filteredByMY = sourceList.filter(t => {
+                    const parsed = parseMonthYearNumber(t.date);
+                    if (!parsed) return false;
+                    return parsed.code >= startCode && parsed.code <= endCode;
+                });
+
+                return {
+                    items: filteredByMY,
+                    subLabel: `Phạm vi: Từ tháng ${String(fm).padStart(2, '0')}/${fy} đến tháng ${String(tm).padStart(2, '0')}/${ty} (${filteredByMY.length} chuyến)`
+                };
+            }
+
+            return {
+                items: sourceList,
+                subLabel: `Phạm vi: Toàn bộ danh sách (${sourceList.length} chuyến)`
+            };
+        }
+
+        function buildPlainCarText(trip) {
+            const parts = [];
+            const c1 = [trip.car, trip.plate, (trip.color && trip.color !== 'Không rõ') ? trip.color : ''].filter(Boolean).join(' - ');
+            if (c1) parts.push(c1);
+            if (trip.contact) parts.push(`LH: ${trip.contact}`);
+
+            if (trip.car2 && trip.car2.trim() !== '') {
+                const c2 = [trip.car2, trip.plate2, (trip.color2 && trip.color2 !== 'Không rõ') ? trip.color2 : ''].filter(Boolean).join(' - ');
+                const swapLabel = trip.swapReason ? `Đổi xe (${trip.swapReason}): ` : 'Đổi xe: ';
+                parts.push(`${swapLabel}${c2}${trip.contact2 ? ` (LH: ${trip.contact2})` : ''}`);
+            }
+            return parts.join('<br>');
+        }
+
+        function buildPlainNoteCell(amount, note) {
+            const amt = Number(amount || 0);
+            if (!(amt > 0)) return `<span style="color:#666666;">-</span>`;
+            const noteHtml = note ? `<span class="pdf-small-note">${note}</span>` : '';
+            return `<div><strong>${formatNum(amt)}k</strong>${noteHtml}</div>`;
+        }
+
+        function populateExcelPdfSheet(items, subLabel) {
+            const tbody = document.getElementById('excelPdfBody');
+            const tfoot = document.getElementById('excelPdfFoot');
+            const subEl = document.getElementById('excelPdfSub');
+
+            const todayVi = new Date().toLocaleDateString('vi-VN');
+            subEl.innerText = `${subLabel}  |  Đơn vị: Nghìn đồng  |  Ngày xuất: ${todayVi}`;
+
+            let sumDays = 0, sumRent = 0, sumFuel = 0, sumToll = 0, sumTotal = 0;
+            let sumPersonal = 0, sumOther = 0, sumSpending = 0, sumKm = 0;
+
+            tbody.innerHTML = items.map((trip, idx) => {
+                const rowTotal = Number(trip.rent || 0) + Number(trip.fuel || 0) + Number(trip.toll || 0);
+                const daysVal = Number(trip.days || 1);
+
+                sumDays += daysVal;
+                sumRent += Number(trip.rent || 0);
+                sumFuel += Number(trip.fuel || 0);
+                sumToll += Number(trip.toll || 0);
+                sumTotal += rowTotal;
+                sumPersonal += Number(trip.personalAmount || 0);
+                sumOther += Number(trip.otherAmount || 0);
+                sumSpending += Number(trip.spendingAmount || 0);
+                sumKm += Number(trip.km || 0);
+
+                const sessionTxt = (daysVal === 0.5 && trip.halfSession === 'morning')
+                    ? `<span class="pdf-small-note">(Sáng)</span>`
+                    : '';
+
+                return `
+                    <tr>
+                        <td class="pdf-num-center">${idx + 1}</td>
+                        <td>${trip.date || ''}</td>
+                        <td class="pdf-num-center">${daysVal}${sessionTxt}</td>
+                        <td>${buildPlainCarText(trip)}</td>
+                        <td>${trip.location || ''}</td>
+                        <td class="pdf-num-right">${formatNum(trip.rent)}</td>
+                        <td class="pdf-num-right">${formatNum(trip.fuel)}</td>
+                        <td class="pdf-num-right">${formatNum(trip.toll)}</td>
+                        <td class="pdf-num-right"><strong>${formatNum(rowTotal)}</strong></td>
+                        <td>${buildPlainNoteCell(trip.personalAmount, trip.personalNote)}</td>
+                        <td>${buildPlainNoteCell(trip.otherAmount, trip.otherNote)}</td>
+                        <td>${buildPlainNoteCell(trip.spendingAmount, trip.spendingNote)}</td>
+                        <td class="pdf-num-right">${formatNum(trip.km)}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            tfoot.innerHTML = `
+                <tr>
+                    <td colspan="2" class="pdf-num-right">Tổng (${items.length} chuyến):</td>
+                    <td class="pdf-num-center">${sumDays}</td>
+                    <td colspan="2"></td>
+                    <td class="pdf-num-right">${formatNum(sumRent)}</td>
+                    <td class="pdf-num-right">${formatNum(sumFuel)}</td>
+                    <td class="pdf-num-right">${formatNum(sumToll)}</td>
+                    <td class="pdf-num-right">${formatNum(sumTotal)}</td>
+                    <td class="pdf-num-right">${formatNum(sumPersonal)}k</td>
+                    <td class="pdf-num-right">${formatNum(sumOther)}k</td>
+                    <td class="pdf-num-right">${formatNum(sumSpending)}k</td>
+                    <td class="pdf-num-right">${formatNum(sumKm)}</td>
+                </tr>
+            `;
+        }
+
+        async function renderElementToPngData(el) {
+            const canvas = await html2canvas(el, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#ffffff',
+                logging: false
+            });
+            return {
+                dataUrl: canvas.toDataURL('image/png'),
+                widthPx: canvas.width,
+                heightPx: canvas.height
+            };
+        }
+
+        async function confirmExportToPDF() {
+            const { items, subLabel } = getPdfSelectedData();
+            if (!items || items.length === 0) {
+                showToast("Không có chuyến đi nào thỏa mãn điều kiện đã chọn!");
+                return;
+            }
+
+            closePdfExportModal();
+            showToast("Đang dựng bảng trắng đen kiểu Excel...");
+
+            populateExcelPdfSheet(items, subLabel);
+
+            const sheetEl = document.getElementById('excelPdfSheet');
+            const titleEl = document.getElementById('excelPdfTitle');
+            const subEl = document.getElementById('excelPdfSub');
+            const theadEl = document.querySelector('#excelPdfTable thead');
+            const tbodyEl = document.getElementById('excelPdfBody');
+            const tfootEl = document.getElementById('excelPdfFoot');
+
+            const originalRows = [...tbodyEl.querySelectorAll('tr')];
+            const footRows = [...tfootEl.querySelectorAll('tr')];
+
+            const origSheetLeft = sheetEl.style.left;
+            const origSheetPos = sheetEl.style.position;
+            const origSheetZ = sheetEl.style.zIndex;
+
+            sheetEl.style.position = 'fixed';
+            sheetEl.style.left = '0px';
+            sheetEl.style.top = '0px';
+            sheetEl.style.zIndex = '-1';
+
+            try {
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({
+                    orientation: 'landscape',
+                    unit: 'mm',
+                    format: 'a4'
+                });
+
+                const pageWidth = pdf.internal.pageSize.getWidth();
+                const pageHeight = pdf.internal.pageSize.getHeight();
+                const marginX = 8;
+                const marginTop = 8;
+                const marginBottom = 8;
+                const printableWidth = pageWidth - marginX * 2;
+                const printableHeight = pageHeight - marginTop - marginBottom;
+
+                const pxToMm = (px) => (px / 2) * (printableWidth / 1088);
+
+                // Ẩn tạm các hàng dữ liệu & tổng để chụp phần đầu trang (tiêu đề + header bảng)
+                originalRows.forEach(r => r.style.display = 'none');
+                footRows.forEach(r => r.style.display = 'none');
+                titleEl.style.display = 'block';
+                subEl.style.display = 'block';
+
+                const headerCapture = await renderElementToPngData(sheetEl);
+                const headerHeightMm = pxToMm(headerCapture.heightPx);
+
+                // Chụp riêng phần tiêu đề cột lặp lại cho các trang sau (nếu tràn trang)
+                titleEl.style.display = 'none';
+                subEl.style.display = 'none';
+                const repeatHeadCapture = await renderElementToPngData(sheetEl);
+                const repeatHeadHeightMm = pxToMm(repeatHeadCapture.heightPx);
+
+                // Chụp riêng dòng tổng cộng cuối bảng
+                footRows.forEach(r => r.style.display = '');
+                const footCapture = await renderElementToPngData(sheetEl);
+                const footHeightMm = pxToMm(footCapture.heightPx);
+                footRows.forEach(r => r.style.display = 'none');
+
+                let pageIndex = 0;
+                let currentYMm = marginTop;
+
+                const startNewPage = (isFirstPage) => {
+                    if (!isFirstPage) {
+                        pdf.addPage();
+                    }
+                    pageIndex++;
+                    currentYMm = marginTop;
+
+                    if (isFirstPage) {
+                        pdf.addImage(headerCapture.dataUrl, 'PNG', marginX, currentYMm, printableWidth, headerHeightMm);
+                        currentYMm += headerHeightMm;
+                    } else {
+                        pdf.addImage(repeatHeadCapture.dataUrl, 'PNG', marginX, currentYMm, printableWidth, repeatHeadHeightMm);
+                        currentYMm += repeatHeadHeightMm;
+                    }
+                };
+
+                startNewPage(true);
+
+                // Render từng hàng riêng lẻ để không bao giờ bị cắt đôi dòng hay ngày
+                for (let i = 0; i < originalRows.length; i++) {
+                    const row = originalRows[i];
+                    row.style.display = '';
+                    const rowCapture = await renderElementToPngData(row);
+                    row.style.display = 'none';
+
+                    const rowHeightMm = pxToMm(rowCapture.heightPx);
+                    const isLastRow = (i === originalRows.length - 1);
+                    const reserveBottomMm = isLastRow ? footHeightMm : 0;
+
+                    if (currentYMm + rowHeightMm + reserveBottomMm > marginTop + printableHeight) {
+                        startNewPage(false);
+                    }
+
+                    pdf.addImage(rowCapture.dataUrl, 'PNG', marginX, currentYMm, printableWidth, rowHeightMm);
+                    currentYMm += rowHeightMm;
+                }
+
+                // Gắn dòng tổng cộng cuối bảng (sang trang nếu không đủ chỗ)
+                if (currentYMm + footHeightMm > marginTop + printableHeight) {
+                    startNewPage(false);
+                }
+                pdf.addImage(footCapture.dataUrl, 'PNG', marginX, currentYMm, printableWidth, footHeightMm);
+
+                const dateStamp = new Date().toLocaleDateString('vi-VN').replace(/\//g, '-');
+                pdf.save(`Lich_Su_Thue_Xe_Excel_${dateStamp}.pdf`);
+                showToast(`Đã xuất file PDF trắng đen (${items.length} chuyến) thành công!`);
+            } catch (err) {
+                console.error("Lỗi xuất PDF:", err);
+                showToast("Có lỗi khi xuất PDF, vui lòng thử lại!");
+            } finally {
+                originalRows.forEach(r => r.style.display = '');
+                footRows.forEach(r => r.style.display = '');
+                titleEl.style.display = '';
+                subEl.style.display = '';
+                sheetEl.style.position = origSheetPos;
+                sheetEl.style.left = origSheetLeft;
+                sheetEl.style.zIndex = origSheetZ;
+            }
+        }
+
+        // Khởi tạo ứng dụng
+        updateSuggestionsAndFilters();
+        renderTable(trips);
     </script>
 </body>
 </html>
