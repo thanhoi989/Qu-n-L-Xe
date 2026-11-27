@@ -363,31 +363,45 @@
             <div id="carUsageContent" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5"></div>
         </div>
 
-        <!-- Khu vực Bảng Dữ Liệu Chính trên giao diện -->
+        <!-- Khu vực Bảng Dữ Liệu Chính trên giao diện (Hỗ trợ thu phóng 2 ngón tay + nút nhanh) -->
         <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div class="overflow-x-auto table-container">
-                <table class="w-full text-left border-collapse table-auto">
-                    <thead>
-                        <tr class="bg-slate-100/80 border-b border-slate-200 text-slate-600 text-xs uppercase tracking-tight font-semibold">
-                            <th class="py-3 px-1.5 text-center w-8">STT</th>
-                            <th class="py-3 px-2">Ngày đi</th>
-                            <th class="py-3 px-1.5 text-center w-12">Ngày</th>
-                            <th class="py-3 px-2 min-w-[140px]">Xe, Biển số & Nhà xe</th>
-                            <th class="py-3 px-2 min-w-[100px]">Địa điểm</th>
-                            <th class="py-3 px-1.5 text-right">Thuê</th>
-                            <th class="py-3 px-1.5 text-right">Xăng</th>
-                            <th class="py-3 px-1.5 text-right">Trạm</th>
-                            <th class="py-3 px-2 text-right text-blue-900 bg-blue-50/60">Tổng xe</th>
-                            <th class="py-3 px-2 text-red-600 bg-red-50/50 min-w-[100px]">Chi phí Cá nhân</th>
-                            <th class="py-3 px-2 min-w-[95px]">Chi phí Khác</th>
-                            <th class="py-3 px-2 text-purple-700 bg-purple-50/50 min-w-[100px]">Tiêu xài (Riêng)</th>
-                            <th class="py-3 px-1.5 text-right">Km</th>
-                            <th class="py-3 px-1.5 text-center w-16 no-print">Thao tác</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody" class="divide-y divide-slate-100 text-[15px] break-words"></tbody>
-                    <tfoot id="tableFoot" class="bg-slate-50 border-t-2 border-slate-200 font-bold text-[15px]"></tfoot>
-                </table>
+            <div class="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2 bg-slate-50/90 border-b border-slate-200 text-xs no-print">
+                <span class="text-slate-500 font-medium">
+                    <i class="fa-solid fa-magnifying-glass-plus mr-1 text-blue-600"></i> Chụm/mở 2 ngón tay trên bảng để thu phóng
+                </span>
+                <div class="flex items-center gap-1.5">
+                    <button type="button" onclick="setHistoryZoom(historyZoomScale - 0.15)" class="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg font-bold text-slate-700 cursor-pointer" title="Thu nhỏ">-</button>
+                    <span id="historyZoomLabel" class="min-w-[46px] text-center font-mono font-bold text-blue-900">100%</span>
+                    <button type="button" onclick="setHistoryZoom(historyZoomScale + 0.15)" class="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg font-bold text-slate-700 cursor-pointer" title="Phóng to">+</button>
+                    <button type="button" onclick="setHistoryZoom(1)" class="px-2.5 py-1 bg-slate-200 hover:bg-slate-300 rounded-lg font-semibold text-slate-800 cursor-pointer" title="Về mặc định 100%">100%</button>
+                </div>
+            </div>
+
+            <div id="historyZoomWrapper" class="overflow-x-auto table-container" style="touch-action: pan-x pan-y;">
+                <div id="historyZoomTarget" style="transform-origin: 0 0; display: inline-block; min-width: 100%;">
+                    <table class="w-full text-left border-collapse table-auto">
+                        <thead>
+                            <tr class="bg-slate-100/80 border-b border-slate-200 text-slate-600 text-xs uppercase tracking-tight font-semibold">
+                                <th class="py-3 px-1.5 text-center w-8">STT</th>
+                                <th class="py-3 px-2">Ngày đi</th>
+                                <th class="py-3 px-1.5 text-center w-12">Ngày</th>
+                                <th class="py-3 px-2 min-w-[140px]">Xe, Biển số & Nhà xe</th>
+                                <th class="py-3 px-2 min-w-[100px]">Địa điểm</th>
+                                <th class="py-3 px-1.5 text-right">Thuê</th>
+                                <th class="py-3 px-1.5 text-right">Xăng</th>
+                                <th class="py-3 px-1.5 text-right">Trạm</th>
+                                <th class="py-3 px-2 text-right text-blue-900 bg-blue-50/60">Tổng xe</th>
+                                <th class="py-3 px-2 text-red-600 bg-red-50/50 min-w-[100px]">Chi phí Cá nhân</th>
+                                <th class="py-3 px-2 min-w-[95px]">Chi phí Khác</th>
+                                <th class="py-3 px-2 text-purple-700 bg-purple-50/50 min-w-[100px]">Tiêu xài (Riêng)</th>
+                                <th class="py-3 px-1.5 text-right">Km</th>
+                                <th class="py-3 px-1.5 text-center w-16 no-print">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody" class="divide-y divide-slate-100 text-[15px] break-words"></tbody>
+                        <tfoot id="tableFoot" class="bg-slate-50 border-t-2 border-slate-200 font-bold text-[15px]"></tfoot>
+                    </table>
+                </div>
             </div>
 
             <!-- Trạng thái trống khi chưa có dữ liệu -->
@@ -843,7 +857,7 @@
         </div>
     </div>
 
-    <!-- Modal Quản Lý Danh Sách Xe -->
+    <!-- Modal Quản Lý Danh Sách Xe (Kéo ngang mượt trên điện thoại & APK) -->
     <div id="carManagerModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
             <div class="px-5 py-3.5 bg-blue-900 text-white flex items-center justify-between shrink-0">
@@ -882,8 +896,8 @@
                     </div>
                 </form>
 
-                <div class="border border-slate-200 rounded-xl overflow-hidden">
-                    <table class="w-full text-left border-collapse text-sm">
+                <div class="border border-slate-200 rounded-xl overflow-x-auto table-container" style="touch-action: pan-x pan-y;">
+                    <table class="w-full min-w-[560px] text-left border-collapse text-sm">
                         <thead>
                             <tr class="bg-slate-100 border-b border-slate-200 text-slate-600 uppercase font-semibold">
                                 <th class="py-2.5 px-2.5 text-center w-10">STT</th>
@@ -1030,6 +1044,63 @@
 
         let deleteTargetId = null;
         let currentFilteredData = [];
+
+        // --- THU PHÓNG BẢNG LỊCH SỬ (2 NGÓN TAY + NÚT NHANH) ---
+        let historyZoomScale = 1;
+        const MIN_HISTORY_ZOOM = 0.6;
+        const MAX_HISTORY_ZOOM = 2.2;
+
+        function setHistoryZoom(newScale) {
+            const target = document.getElementById('historyZoomTarget');
+            const wrapper = document.getElementById('historyZoomWrapper');
+            const label = document.getElementById('historyZoomLabel');
+            if (!target || !wrapper) return;
+
+            target.style.transform = 'scale(1)';
+            target.style.width = '';
+            const baseWidth = target.scrollWidth;
+            const baseHeight = target.scrollHeight;
+
+            historyZoomScale = Math.min(MAX_HISTORY_ZOOM, Math.max(MIN_HISTORY_ZOOM, Number(newScale.toFixed(2))));
+            target.style.width = `${baseWidth}px`;
+            target.style.transform = `scale(${historyZoomScale})`;
+            wrapper.style.minHeight = `${Math.ceil(baseHeight * historyZoomScale)}px`;
+
+            if (label) {
+                label.textContent = `${Math.round(historyZoomScale * 100)}%`;
+            }
+        }
+
+        (function initHistoryPinchZoom() {
+            const wrapper = document.getElementById('historyZoomWrapper');
+            if (!wrapper) return;
+
+            let initialDistance = 0;
+            let startScale = 1;
+
+            const getDistance = (t1, t2) => Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+
+            wrapper.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 2) {
+                    initialDistance = getDistance(e.touches[0], e.touches[1]);
+                    startScale = historyZoomScale;
+                }
+            }, { passive: true });
+
+            wrapper.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 2 && initialDistance > 0) {
+                    e.preventDefault();
+                    const currentDistance = getDistance(e.touches[0], e.touches[1]);
+                    setHistoryZoom(startScale * (currentDistance / initialDistance));
+                }
+            }, { passive: false });
+
+            wrapper.addEventListener('touchend', (e) => {
+                if (e.touches.length < 2) {
+                    initialDistance = 0;
+                }
+            }, { passive: true });
+        })();
 
         function persistData() {
             try {
@@ -2361,7 +2432,6 @@
             const sheetEl = document.getElementById('excelPdfSheet');
             const titleEl = document.getElementById('excelPdfTitle');
             const subEl = document.getElementById('excelPdfSub');
-            const theadEl = document.querySelector('#excelPdfTable thead');
             const tbodyEl = document.getElementById('excelPdfBody');
             const tfootEl = document.getElementById('excelPdfFoot');
 
@@ -2395,7 +2465,6 @@
 
                 const pxToMm = (px) => (px / 2) * (printableWidth / 1088);
 
-                // Ẩn tạm các hàng dữ liệu & tổng để chụp phần đầu trang (tiêu đề + header bảng)
                 originalRows.forEach(r => r.style.display = 'none');
                 footRows.forEach(r => r.style.display = 'none');
                 titleEl.style.display = 'block';
@@ -2404,26 +2473,22 @@
                 const headerCapture = await renderElementToPngData(sheetEl);
                 const headerHeightMm = pxToMm(headerCapture.heightPx);
 
-                // Chụp riêng phần tiêu đề cột lặp lại cho các trang sau (nếu tràn trang)
                 titleEl.style.display = 'none';
                 subEl.style.display = 'none';
                 const repeatHeadCapture = await renderElementToPngData(sheetEl);
                 const repeatHeadHeightMm = pxToMm(repeatHeadCapture.heightPx);
 
-                // Chụp riêng dòng tổng cộng cuối bảng
                 footRows.forEach(r => r.style.display = '');
                 const footCapture = await renderElementToPngData(sheetEl);
                 const footHeightMm = pxToMm(footCapture.heightPx);
                 footRows.forEach(r => r.style.display = 'none');
 
-                let pageIndex = 0;
                 let currentYMm = marginTop;
 
                 const startNewPage = (isFirstPage) => {
                     if (!isFirstPage) {
                         pdf.addPage();
                     }
-                    pageIndex++;
                     currentYMm = marginTop;
 
                     if (isFirstPage) {
@@ -2437,7 +2502,6 @@
 
                 startNewPage(true);
 
-                // Render từng hàng riêng lẻ để không bao giờ bị cắt đôi dòng hay ngày
                 for (let i = 0; i < originalRows.length; i++) {
                     const row = originalRows[i];
                     row.style.display = '';
@@ -2456,7 +2520,6 @@
                     currentYMm += rowHeightMm;
                 }
 
-                // Gắn dòng tổng cộng cuối bảng (sang trang nếu không đủ chỗ)
                 if (currentYMm + footHeightMm > marginTop + printableHeight) {
                     startNewPage(false);
                 }
