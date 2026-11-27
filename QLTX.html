@@ -1425,36 +1425,34 @@
 
         function extractMonthKey(dateStr) {
             if (!dateStr) return 'unknown';
-            const cleaned = String(dateStr)
+            const plusParts = String(dateStr).split('+').map(s => s.trim()).filter(Boolean);
+            const targetPart = plusParts.length > 0 ? plusParts[plusParts.length - 1] : String(dateStr);
+
+            const cleaned = targetPart
                 .replace(/[½¼¾]/g, ' ')
                 .replace(/^\s*(?:1\/2|1\/4|3\/4)\b\s*/i, ' ')
                 .trim();
 
-            const fullMatches = [...cleaned.matchAll(/(\d{1,2})\s*[\/\-]\s*(\d{1,2})(?:\s*[\/\-]\s*(\d{2,4}))?/g)];
-            if (fullMatches.length > 0) {
-                const lastMatch = fullMatches[fullMatches.length - 1];
-                const month = lastMatch[2].padStart(2, '0');
-                let year = lastMatch[3] || '';
-
-                if (!year) {
-                    for (let i = fullMatches.length - 2; i >= 0; i--) {
-                        if (fullMatches[i][3]) {
-                            year = fullMatches[i][3];
-                            break;
-                        }
-                    }
+            // Tách theo dấu '/' để lấy tháng và năm chính xác ở các cụm như "4-6/08/26", "1/2 25/8/26", "28/08/26"
+            const slashParts = cleaned.split('/').map(s => s.trim());
+            if (slashParts.length >= 3) {
+                const yearRaw = slashParts[slashParts.length - 1].match(/^(\d{2,4})/);
+                const monthRaw = slashParts[slashParts.length - 2].match(/(\d{1,2})\s*$/);
+                if (monthRaw && yearRaw) {
+                    const month = monthRaw[1].padStart(2, '0');
+                    let year = yearRaw[1];
+                    if (year.length === 2) year = '20' + year;
+                    return `${month}/${year}`;
                 }
-
-                if (year.length === 2) year = '20' + year;
-                return year ? `${month}/${year}` : `${month}`;
-            }
-
-            const rangeMonthYearMatch = cleaned.match(/(\d{1,2})\s*[\/\-]\s*(\d{2,4})$/);
-            if (rangeMonthYearMatch) {
-                const month = rangeMonthYearMatch[1].padStart(2, '0');
-                let year = rangeMonthYearMatch[2] || '';
-                if (year.length === 2) year = '20' + year;
-                return year ? `${month}/${year}` : `${month}`;
+            } else if (slashParts.length === 2) {
+                const secondRaw = slashParts[1].match(/^(\d{1,4})/);
+                const firstRaw = slashParts[0].match(/(\d{1,2})\s*$/);
+                if (firstRaw && secondRaw) {
+                    const month = firstRaw[1].padStart(2, '0');
+                    let year = secondRaw[1];
+                    if (year.length === 2) year = '20' + year;
+                    return year.length === 4 ? `${month}/${year}` : `${month}`;
+                }
             }
 
             return cleaned;
